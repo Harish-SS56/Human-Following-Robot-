@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Control</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .video-container {
+            width: 640px;
+            height: 480px;
+            border: 3px solid #4CAF50;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            padding: 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: #333;
+            color: white;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        #forward {
+            grid-column: 2;
+            background-color: #4CAF50;
+        }
+
+        #left {
+            grid-column: 1;
+            background-color: #2196F3;
+        }
+
+        #stop {
+            grid-column: 2;
+            background-color: #f44336;
+            padding: 30px;
+        }
+
+        #right {
+            grid-column: 3;
+            background-color: #2196F3;
+        }
+
+        #backward {
+            grid-column: 2;
+            background-color: #4CAF50;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .status-item {
+            padding: 10px 20px;
+            background-color: #333;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .video-container {
+                width: 100%;
+                height: auto;
+            }
+            
+            .control-btn {
+                padding: 15px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Manual Control Mode</h1>
+    
+    <div class="video-container">
+        <img id="video-feed" src="{{ url_for('video_feed') }}">
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" id="forward" 
+                onmousedown="sendCommand('forward', true)"
+                onmouseup="sendCommand('forward', false)"
+                ontouchstart="sendCommand('forward', true)"
+                ontouchend="sendCommand('forward', false)">↑ Forward</button>
+                
+        <button class="control-btn" id="left" 
+                onmousedown="sendCommand('left', true)"
+                onmouseup="sendCommand('left', false)"
+                ontouchstart="sendCommand('left', true)"
+                ontouchend="sendCommand('left', false)">← Left</button>
+
+        <button class="control-btn" id="stop" 
+                onclick="sendStop()">⏹ Stop</button>
+
+        <button class="control-btn" id="right" 
+                onmousedown="sendCommand('right', true)"
+                onmouseup="sendCommand('right', false)"
+                ontouchstart="sendCommand('right', true)"
+                ontouchend="sendCommand('right', false)">→ Right</button>
+
+        <button class="control-btn" id="backward" 
+                onmousedown="sendCommand('backward', true)"
+                onmouseup="sendCommand('backward', false)"
+                ontouchstart="sendCommand('backward', true)"
+                ontouchend="sendCommand('backward', false)">↓ Backward</button>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-item">Connection: <span id="connection-status">Connecting...</span></div>
+        <div class="status-item">Battery: <span id="battery-status">100%</span></div>
+    </div>
+
+    <script>
+        const socket = io.connect('http://' + document.domain + ':' + location.port);
+        
+        // Handle connection status
+        socket.on('connect', () => {
+            document.getElementById('connection-status').textContent = 'Connected';
+            document.getElementById('connection-status').style.color = '#4CAF50';
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('connection-status').textContent = 'Disconnected';
+            document.getElementById('connection-status').style.color = '#f44336';
+        });
+
+        // Command functions
+        function sendCommand(direction, state) {
+            socket.emit('manual_command', {
+                action: direction,
+                state: state
+            });
+        }
+
+        function sendStop() {
+            socket.emit('manual_command', {
+                action: 'stop',
+                state: true
+            });
+        }
+
+        // Handle window blur (release all keys)
+        window.addEventListener('blur', () => {
+            const buttons = document.querySelectorAll('.control-btn');
+            buttons.forEach(btn => {
+                if(btn.id !== 'stop') {
+                    btn.dispatchEvent(new Event('mouseup'));
+                }
+            });
+        });
+
+        // Prevent context menu on mobile
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>

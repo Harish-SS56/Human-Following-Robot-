@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Mode</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .video-container {
+            width: 640px;
+            max-width: 90%;
+            aspect-ratio: 4/3;
+            border: 3px solid #4CAF50;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .control-btn {
+            padding: 12px 35px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 120px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #start-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #start-btn:disabled {
+            background-color: #2d5f2f;
+            cursor: not-allowed;
+        }
+
+        #stop-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .status-panel {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .status-label {
+            font-size: 0.85em;
+            color: #a0a0a0;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .status-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tracking-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .tracking-active {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px #4CAF50aa;
+        }
+
+        .tracking-inactive {
+            background-color: #f44336;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #404040;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+
+        .warning-message {
+            color: #ff4444;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #ff444422;
+        }
+
+        @media (max-width: 768px) {
+            .status-panel {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .control-btn {
+                padding: 10px 25px;
+                font-size: 1em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .status-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .video-container {
+                border-radius: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Autonomous Following Mode</h1>
+    
+    <div class="video-container">
+        <img id="video-feed" src="{{ url_for('video_feed') }}">
+    </div>
+
+    <div class="controls">
+        <button id="start-btn" class="control-btn" onclick="startAutomated()">▶ Start Tracking</button>
+        <button id="stop-btn" class="control-btn" onclick="stopAutomated()">⏹ Emergency Stop</button>
+    </div>
+
+    <div class="status-panel">
+        <div class="status-card">
+            <div class="status-label">SYSTEM STATUS</div>
+            <div class="status-value">
+                <span id="system-status">IDLE</span>
+                <span id="tracking-indicator" class="tracking-indicator tracking-inactive"></span>
+            </div>
+            <div class="progress-bar">
+                <div id="system-load" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="status-card">
+            <div class="status-label">PROCESSING FPS</div>
+            <div class="status-value" id="fps-status">0.0</div>
+            <div class="progress-bar">
+                <div id="fps-bar" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <div class="status-label">MOTOR ACTION</div>
+            <div class="status-value" id="motor-action">NONE</div>
+            <div class="progress-bar">
+                <div id="motor-speed" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <div class="status-label">TARGET DISTANCE</div>
+            <div class="status-value" id="distance-status">-</div>
+            <div class="progress-bar">
+                <div id="distance-bar" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="warning-message" class="warning-message"></div>
+
+    <script>
+        const socket = io.connect('http://' + document.domain + ':' + location.port);
+        let statusUpdateInterval;
+        let isAutoRunning = false;
+
+        // Connection handling
+        socket.on('connect', () => {
+            updateConnectionStatus('CONNECTED', '#4CAF50');
+            document.getElementById('start-btn').disabled = false;
+        });
+
+        socket.on('disconnect', () => {
+            updateConnectionStatus('DISCONNECTED', '#f44336');
+            stopStatusUpdates();
+            document.getElementById('start-btn').disabled = true;
+        });
+
+        // Status updates
+        socket.on('auto_status', (data) => {
+            document.getElementById('fps-status').textContent = data.fps.toFixed(1);
+            document.getElementById('motor-action').textContent = data.action || 'NONE';
+            document.getElementById('distance-status').textContent = data.distance || '-';
+            updateTrackingStatus(data.tracking);
+            updateSystemStatus(data.state);
+            
+            // Update progress bars
+            document.getElementById('fps-bar').style.width = `${Math.min(data.fps/30*100, 100)}%`;
+            document.getElementById('motor-speed').style.width = `${data.speed || 0}%`;
+            document.getElementById('distance-bar').style.width = `${data.distance_percent || 0}%`;
+            
+            // Update warning message
+            const warningElem = document.getElementById('warning-message');
+            warningElem.textContent = data.warning || '';
+            warningElem.style.display = data.warning ? 'block' : 'none';
+        });
+
+        function updateConnectionStatus(text, color) {
+            const elem = document.getElementById('connection-status');
+            elem.textContent = text;
+            elem.style.color = color;
+        }
+
+        function updateTrackingStatus(isTracking) {
+            const indicator = document.getElementById('tracking-indicator');
+            indicator.className = `tracking-indicator ${isTracking ? 'tracking-active' : 'tracking-inactive'}`;
+        }
+
+        function updateSystemStatus(status) {
+            const states = {
+                'running': ['ACTIVE', '#4CAF50'],
+                'idle': ['IDLE', '#FF9800'],
+                'error': ['ERROR', '#f44336']
+            };
+            const elem = document.getElementById('system-status');
+            const [text, color] = states[status] || ['UNKNOWN', '#888'];
+            elem.textContent = text;
+            elem.style.color = color;
+        }
+
+        function startAutomated() {
+            if(isAutoRunning) return;
+            socket.emit('auto_control', 'start');
+            isAutoRunning = true;
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('stop-btn').disabled = false;
+            startStatusUpdates();
+        }
+
+        function stopAutomated() {
+            if(!isAutoRunning) return;
+            socket.emit('auto_control', 'stop');
+            isAutoRunning = false;
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            stopStatusUpdates();
+        }
+
+        function startStatusUpdates() {
+            statusUpdateInterval = setInterval(() => {
+                socket.emit('status_request');
+            }, 500);
+        }
+
+        function stopStatusUpdates() {
+            clearInterval(statusUpdateInterval);
+            updateSystemStatus('idle');
+            updateTrackingStatus(false);
+            document.getElementById('fps-status').textContent = '0.0';
+            document.getElementById('motor-action').textContent = 'NONE';
+            document.getElementById('distance-status').textContent = '-';
+            document.getElementById('warning-message').textContent = '';
+        }
+
+        // Initialize
+        document.getElementById('stop-btn').disabled = true;
+        window.addEventListener('beforeunload', () => {
+            if(isAutoRunning) socket.emit('auto_control', 'stop');
+        });
+    </script>
+</body>
+</html>
