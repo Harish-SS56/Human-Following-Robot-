@@ -37,9 +37,9 @@ A smart, vision-based robot that autonomously follows a specific person using re
 - Real-time Web Streaming
 - Kalman Filtering (for smooth tracking)
 
-## 📷 Screenshots
+## 📷 recordings of the project
 
-> Add screenshots or GIFs here showing robot following, gesture commands, and web dashboard.
+
 
 ## 🚀 Getting Started
 
@@ -62,6 +62,10 @@ A smart, vision-based robot that autonomously follows a specific person using re
 # Backend
 cd backend
 pip install -r requirements.txt
+
+https://github.com/user-attachments/assets/a538ffea-ef10-46e1-ba15-22be6a873106
+
+
 python app.py
 
 # Frontend
