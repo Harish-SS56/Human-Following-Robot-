@@ -15,7 +15,11 @@ A smart, vision-based robot that autonomously follows a specific person using re
 - **Dynamic HSV Tracking**: Adaptive color segmentation for robustness in varying lighting.
 - **Pose Estimation**: Tracks orientation and movement direction.
 - **Gesture Control**: MediaPipe-based hand gestures (open = follow, fist = stop).
-- **Motion Control**: Dual PID controllers for distance and steering.
+- **Motion Control*
+
+https://github.com/user-attachments/assets/16137667-dcc5-485f-9913-b5e6b1eb7daa
+
+*: Dual PID controllers for distance and steering.
 - **Fallback Mode**: Automatically searches for the user if lost from view.
 - **Live Monitoring**: Flask-based app streams video and system stats.
 - **Frontend Dashboard**:
